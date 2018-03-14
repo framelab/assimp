@@ -106,6 +106,13 @@ AI_FORCE_INLINE bool IsLineEnd( char_t in)
 
 // ---------------------------------------------------------------------------------
 template <class char_t>
+AI_FORCE_INLINE bool IsComment(char_t in)
+{
+    return (in == (char_t)'#');
+}
+
+// ---------------------------------------------------------------------------------
+template <class char_t>
 AI_FORCE_INLINE bool IsSpaceOrNewLine( char_t in)
 {
     return IsSpace<char_t>(in) || IsLineEnd<char_t>(in);

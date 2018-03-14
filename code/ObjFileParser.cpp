@@ -52,6 +52,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/material.h>
 #include <assimp/Importer.hpp>
 #include <cstdlib>
+#include <string>
+#include <iostream>
 
 namespace Assimp {
 
@@ -402,6 +404,7 @@ void ObjFileParser::getVector2( std::vector<aiVector2D> &point2d_array ) {
 static const std::string DefaultObjName = "defaultobject";
 
 void ObjFileParser::getFace( aiPrimitiveType type ) {
+    DataArrayIt lineStartIt = m_DataIt;
     m_DataIt = getNextToken<DataArrayIt>( m_DataIt, m_DataItEnd );
     if ( m_DataIt == m_DataItEnd || *m_DataIt == '\0' ) {
         return;
@@ -420,7 +423,7 @@ void ObjFileParser::getFace( aiPrimitiveType type ) {
     while ( m_DataIt != m_DataItEnd ) {
         iStep = 1;
 
-        if ( IsLineEnd( *m_DataIt ) ) {
+        if ( IsLineEnd( *m_DataIt ) || IsComment( *m_DataIt )) {
             break;
         }
 
@@ -477,10 +480,13 @@ void ObjFileParser::getFace( aiPrimitiveType type ) {
                 }
             } else {
                 //On error, std::atoi will return 0 which is not a valid value
+                //std::cout << "OBJ: Invalid face index" << std::endl;
+                //std::cout << std::string(&(*lineStartIt), std::min(100, (int)(m_DataItEnd - lineStartIt))) << std::endl;
+                //std::cout << std::string(&(*m_DataIt), std::min(100, (int)(m_DataItEnd - m_DataIt))) << std::endl;
                 delete face;
                 delete m_pModel;
                 m_pModel = nullptr;
-                throw DeadlyImportError("OBJ: Invalid face indice");
+                throw DeadlyImportError("OBJ: Invalid face index");
             }
 
         }
