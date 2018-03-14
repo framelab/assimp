@@ -410,9 +410,14 @@ void ObjFileImporter::createVertexArray(const ObjFile::Model* pModel,
     // Copy vertices of this mesh instance
     pMesh->mNumVertices = numIndices;
     if (pMesh->mNumVertices == 0) {
-        throw DeadlyImportError( "OBJ: no vertices" );
-    } else if (pMesh->mNumVertices > AI_MAX_ALLOC(aiVector3D)) {
-        throw DeadlyImportError( "OBJ: Too many vertices, would run out of memory" );
+        delete pMesh;
+        pMesh = nullptr;
+        throw DeadlyImportError("OBJ: no vertices");
+    }
+    else if (pMesh->mNumVertices > AI_MAX_VERTICES) {
+        delete pMesh;
+        pMesh = nullptr;
+        throw DeadlyImportError("OBJ: Too many vertices");
     }
     pMesh->mVertices = new aiVector3D[ pMesh->mNumVertices ];
 
