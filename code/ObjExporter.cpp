@@ -51,6 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/material.h>
 #include <assimp/scene.h>
 #include <memory>
+#include <iomanip>
 
 using namespace Assimp;
 
@@ -267,6 +268,9 @@ void ObjExporter::WriteGeometryFile(bool noMtl) {
     aiMatrix4x4 mBase;
     AddNode(pScene->mRootNode, mBase);
 
+    // set precision
+    mOutput << std::setprecision(7);
+
     // write vertex positions with colors, if any
     mVpMap.getVectors( vp );
     mVcMap.getColors( vc );
@@ -411,7 +415,7 @@ void ObjExporter::AddMesh(const aiString& name, const aiMesh* m, const aiMatrix4
             aiVector3D vert = mat * m->mVertices[idx];
             face.indices[a].vp = mVpMap.getIndex(vert);
 
-            if (m->mNormals) {
+            if ( m->HasNormals() && nullptr != m->mNormals ) {
                 aiVector3D norm = aiMatrix3x3(mat) * m->mNormals[idx];
                 face.indices[a].vn = mVnMap.getIndex(norm);
             } else {

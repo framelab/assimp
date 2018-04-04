@@ -52,6 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/IOSystem.hpp>
 #include <assimp/Exporter.hpp>
 #include "qnan.h"
+#include <iostream>
 
 
 //using namespace Assimp;
