@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -49,9 +50,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/scene.h>
 
-#include "SpatialSort.h"
+#include <assimp/SpatialSort.h>
 #include "BaseProcess.h"
-#include "ParsingUtils.h"
+#include <assimp/ParsingUtils.h>
 
 #include <list>
 
@@ -347,7 +348,7 @@ class ComputeSpatialSortProcess : public BaseProcess
     void Execute( aiScene* pScene)
     {
         typedef std::pair<SpatialSort, ai_real> _Type;
-        DefaultLogger::get()->debug("Generate spatially-sorted vertex cache");
+        ASSIMP_LOG_DEBUG("Generate spatially-sorted vertex cache");
 
         std::vector<_Type>* p = new std::vector<_Type>(pScene->mNumMeshes);
         std::vector<_Type>::iterator it = p->begin();

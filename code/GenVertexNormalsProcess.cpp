@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,8 +50,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // internal headers
 #include "GenVertexNormalsProcess.h"
 #include "ProcessHelper.h"
-#include "Exceptional.h"
-#include "qnan.h"
+#include <assimp/Exceptional.h>
+#include <assimp/qnan.h>
 
 using namespace Assimp;
 
@@ -87,24 +88,25 @@ void GenVertexNormalsProcess::SetupProperties(const Importer* pImp)
 // Executes the post processing step on the given imported data.
 void GenVertexNormalsProcess::Execute( aiScene* pScene)
 {
-    DefaultLogger::get()->debug("GenVertexNormalsProcess begin");
+    ASSIMP_LOG_DEBUG("GenVertexNormalsProcess begin");
 
-    if (pScene->mFlags & AI_SCENE_FLAGS_NON_VERBOSE_FORMAT)
+    if (pScene->mFlags & AI_SCENE_FLAGS_NON_VERBOSE_FORMAT) {
         throw DeadlyImportError("Post-processing order mismatch: expecting pseudo-indexed (\"verbose\") vertices here");
+    }
 
     bool bHas = false;
-    for( unsigned int a = 0; a < pScene->mNumMeshes; a++)
-    {
+    for( unsigned int a = 0; a < pScene->mNumMeshes; ++a) {
         if(GenMeshVertexNormals( pScene->mMeshes[a],a))
             bHas = true;
     }
 
     if (bHas)   {
-        DefaultLogger::get()->info("GenVertexNormalsProcess finished. "
+        ASSIMP_LOG_INFO("GenVertexNormalsProcess finished. "
             "Vertex normals have been calculated");
+    } else {
+        ASSIMP_LOG_DEBUG("GenVertexNormalsProcess finished. "
+            "Normals are already there");
     }
-    else DefaultLogger::get()->debug("GenVertexNormalsProcess finished. "
-        "Normals are already there");
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -119,7 +121,7 @@ bool GenVertexNormalsProcess::GenMeshVertexNormals (aiMesh* pMesh, unsigned int 
     // are undefined.
     if (!(pMesh->mPrimitiveTypes & (aiPrimitiveType_TRIANGLE | aiPrimitiveType_POLYGON)))
     {
-        DefaultLogger::get()->info("Normal vectors are undefined for line and point meshes");
+        ASSIMP_LOG_INFO("Normal vectors are undefined for line and point meshes");
         return false;
     }
 

@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -43,9 +44,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "glTF2Exporter.h"
 
-#include "Exceptional.h"
-#include "StringComparison.h"
-#include "ByteSwapper.h"
+#include <assimp/Exceptional.h>
+#include <assimp/StringComparison.h>
+#include <assimp/ByteSwapper.h>
 
 #include "SplitLargeMeshes.h"
 
@@ -77,10 +78,18 @@ namespace Assimp {
         glTF2Exporter exporter(pFile, pIOSystem, pScene, pProperties, false);
     }
 
+    // ------------------------------------------------------------------------------------------------
+    // Worker function for exporting a scene to GLB. Prototyped and registered in Exporter.cpp
+    void ExportSceneGLB2(const char* pFile, IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* pProperties)
+    {
+        // invoke the exporter
+        glTF2Exporter exporter(pFile, pIOSystem, pScene, pProperties, true);
+    }
+
 } // end of namespace Assimp
 
 glTF2Exporter::glTF2Exporter(const char* filename, IOSystem* pIOSystem, const aiScene* pScene,
-                           const ExportProperties* pProperties, bool /*isBinary*/)
+                           const ExportProperties* pProperties, bool isBinary)
     : mFilename(filename)
     , mIOSystem(pIOSystem)
     , mProperties(pProperties)
@@ -101,6 +110,10 @@ glTF2Exporter::glTF2Exporter(const char* filename, IOSystem* pIOSystem, const ai
 
     mAsset.reset( new Asset( pIOSystem ) );
 
+    if (isBinary) {
+        mAsset->SetAsBinary();
+    }
+
     ExportMetadata();
 
     ExportMaterials();
@@ -118,7 +131,11 @@ glTF2Exporter::glTF2Exporter(const char* filename, IOSystem* pIOSystem, const ai
 
     AssetWriter writer(*mAsset);
 
-    writer.WriteFile(filename);
+    if (isBinary) {
+        writer.WriteGLBFile(filename);
+    } else {
+        writer.WriteFile(filename);
+    }
 }
 
 /*
@@ -299,11 +316,9 @@ void glTF2Exporter::GetMatTex(const aiMaterial* mat, Ref<Texture>& texture, aiTe
             std::string path = tex.C_Str();
 
             if (path.size() > 0) {
-                if (path[0] != '*') {
-                    std::map<std::string, unsigned int>::iterator it = mTexturesByPath.find(path);
-                    if (it != mTexturesByPath.end()) {
-                        texture = mAsset->textures.Get(it->second);
-                    }
+                std::map<std::string, unsigned int>::iterator it = mTexturesByPath.find(path);
+                if (it != mTexturesByPath.end()) {
+                    texture = mAsset->textures.Get(it->second);
                 }
 
                 if (!texture) {
@@ -445,7 +460,7 @@ void glTF2Exporter::ExportMaterials()
                 mat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS
             ) {
                 // convert specular color to luminance
-                float specularIntensity = specularColor[0] * 0.2125 + specularColor[1] * 0.7154 + specularColor[2] * 0.0721;
+                float specularIntensity = specularColor[0] * 0.2125f + specularColor[1] * 0.7154f + specularColor[2] * 0.0721f;
                 //normalize shininess (assuming max is 1000) with an inverse exponentional curve
                 float normalizedShininess = std::sqrt(shininess / 1000);
 
@@ -623,6 +638,26 @@ void ExportSkin(Asset& mAsset, const aiMesh* aimesh, Ref<Mesh>& meshRef, Ref<Buf
     Mesh::Primitive& p = meshRef->primitives.back();
     Ref<Accessor> vertexJointAccessor = ExportData(mAsset, skinRef->id, bufferRef, aimesh->mNumVertices, vertexJointData, AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT);
     if ( vertexJointAccessor ) {
+        unsigned int offset = vertexJointAccessor->bufferView->byteOffset;
+        unsigned int bytesLen = vertexJointAccessor->bufferView->byteLength;
+        unsigned int s_bytesPerComp= ComponentTypeSize(ComponentType_UNSIGNED_SHORT);
+        unsigned int bytesPerComp = ComponentTypeSize(vertexJointAccessor->componentType);
+        unsigned int s_bytesLen = bytesLen * s_bytesPerComp / bytesPerComp;
+        Ref<Buffer> buf = vertexJointAccessor->bufferView->buffer;
+        uint8_t* arrys = new uint8_t[s_bytesLen];
+        unsigned int i = 0;
+        for ( unsigned int j = 0; j <= bytesLen; j += bytesPerComp ){
+            size_t len_p = offset + j;
+            float f_value = *(float *)&buf->GetPointer()[len_p];
+            unsigned short c = static_cast<unsigned short>(f_value);
+            uint8_t* data = new uint8_t[s_bytesPerComp];
+            data = (uint8_t*)&c;
+            memcpy(&arrys[i*s_bytesPerComp], data, s_bytesPerComp);
+            ++i;
+        }
+        buf->ReplaceData_joint(offset, bytesLen, arrys, s_bytesLen);
+        vertexJointAccessor->componentType = ComponentType_UNSIGNED_SHORT;
+
         p.attributes.joint.push_back( vertexJointAccessor );
     }
 
@@ -692,8 +727,13 @@ void glTF2Exporter::ExportMeshes()
 		if (v) p.attributes.position.push_back(v);
 
 		/******************** Normals ********************/
+        // Normalize all normals as the validator can emit a warning otherwise
+        for (auto i = 0u; i < aim->mNumVertices; ++i) {
+            aim->mNormals[i].Normalize();
+        }
+
 		Ref<Accessor> n = ExportData(*mAsset, meshId, b, aim->mNumVertices, aim->mNormals, AttribType::VEC3, AttribType::VEC3, ComponentType_FLOAT);
-		if (n) p.attributes.normal.push_back(n);
+        if (n) p.attributes.normal.push_back(n);
 
 		/************** Texture coordinates **************/
         for (int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
@@ -712,6 +752,14 @@ void glTF2Exporter::ExportMeshes()
 			}
 		}
 
+		/*************** Vertex colors ****************/
+		for (unsigned int indexColorChannel = 0; indexColorChannel < aim->GetNumColorChannels(); ++indexColorChannel)
+		{
+			Ref<Accessor> c = ExportData(*mAsset, meshId, b, aim->mNumVertices, aim->mColors[indexColorChannel], AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT, false);
+			if (c)
+				p.attributes.color.push_back(c);
+		}
+		
 		/*************** Vertices indices ****************/
 		if (aim->mNumFaces > 0) {
 			std::vector<IndicesType> indices;
