@@ -484,8 +484,6 @@ void ObjFileParser::getFace( aiPrimitiveType type ) {
                 //std::cout << std::string(&(*lineStartIt), std::min(100, (int)(m_DataItEnd - lineStartIt))) << std::endl;
                 //std::cout << std::string(&(*m_DataIt), std::min(100, (int)(m_DataItEnd - m_DataIt))) << std::endl;
                 delete face;
-                delete m_pModel;
-                m_pModel = nullptr;
                 throw DeadlyImportError("OBJ: Invalid face index");
             }
 
