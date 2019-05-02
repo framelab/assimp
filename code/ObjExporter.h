@@ -47,6 +47,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_OBJEXPORTER_H_INC
 
 #include <assimp/types.h>
+#include <iostream>
+#include <fstream>
 #include <sstream>
 #include <vector>
 #include <map>
@@ -63,13 +65,16 @@ namespace Assimp {
 class ObjExporter {
 public:
     /// Constructor for a specific scene to export
-    ObjExporter(const char* filename, const aiScene* pScene, bool noMtl=false);
+    ObjExporter();
     ~ObjExporter();
+
+    void Write(const char* filename, const aiScene* pScene, bool noMtl);
+
     std::string GetMaterialLibName();
     std::string GetMaterialLibFileName();
     
     /// public string-streams to write all output into
-    std::ostringstream mOutput, mOutputMat;
+    std::ofstream mOutput, mOutputMat;
 
 private:
     // intermediate data structures
@@ -95,7 +100,7 @@ private:
         std::vector<Face> faces;
     };
 
-    void WriteHeader(std::ostringstream& out);
+    void WriteHeader(std::ofstream& out);
     void WriteMaterialFile();
     void WriteGeometryFile(bool noMtl=false);
     std::string GetMaterialName(unsigned int index);
@@ -104,7 +109,7 @@ private:
 
 private:
     std::string filename;
-    const aiScene* const pScene;
+    const aiScene* pScene;
 
     struct vertexData {
         aiVector3D vp;

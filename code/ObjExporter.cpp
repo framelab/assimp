@@ -62,49 +62,49 @@ namespace Assimp {
 // Worker function for exporting a scene to Wavefront OBJ. Prototyped and registered in Exporter.cpp
 void ExportSceneObj(const char* pFile,IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* /*pProperties*/) {
     // invoke the exporter
-    ObjExporter exporter(pFile, pScene);
+    ObjExporter exporter;
+    exporter.Write(pFile, pScene, false);
 
-    if (exporter.mOutput.fail() || exporter.mOutputMat.fail()) {
-        throw DeadlyExportError("output data creation failed. Most likely the file became too large: " + std::string(pFile));
-    }
+    //if (exporter.mOutput.fail() || exporter.mOutputMat.fail()) {
+    //    throw DeadlyExportError("output data creation failed. Most likely the file became too large: " + std::string(pFile));
+    //}
 
-    // we're still here - export successfully completed. Write both the main OBJ file and the material script
-    {
-        std::unique_ptr<IOStream> outfile (pIOSystem->Open(pFile,"wt"));
-        if(outfile == NULL) {
-            throw DeadlyExportError("could not open output .obj file: " + std::string(pFile));
-        }
-        outfile->Write( exporter.mOutput.str().c_str(), static_cast<size_t>(exporter.mOutput.tellp()),1);
-    }
-    {
-        std::unique_ptr<IOStream> outfile (pIOSystem->Open(exporter.GetMaterialLibFileName(),"wt"));
-        if(outfile == NULL) {
-            throw DeadlyExportError("could not open output .mtl file: " + std::string(exporter.GetMaterialLibFileName()));
-        }
-        outfile->Write( exporter.mOutputMat.str().c_str(), static_cast<size_t>(exporter.mOutputMat.tellp()),1);
-    }
+    //// we're still here - export successfully completed. Write both the main OBJ file and the material script
+    //{
+    //    std::unique_ptr<IOStream> outfile (pIOSystem->Open(pFile,"wt"));
+    //    if(outfile == NULL) {
+    //        throw DeadlyExportError("could not open output .obj file: " + std::string(pFile));
+    //    }
+    //    outfile->Write( exporter.mOutput.str().c_str(), static_cast<size_t>(exporter.mOutput.tellp()),1);
+    //}
+    //{
+    //    std::unique_ptr<IOStream> outfile (pIOSystem->Open(exporter.GetMaterialLibFileName(),"wt"));
+    //    if(outfile == NULL) {
+    //        throw DeadlyExportError("could not open output .mtl file: " + std::string(exporter.GetMaterialLibFileName()));
+    //    }
+    //    outfile->Write( exporter.mOutputMat.str().c_str(), static_cast<size_t>(exporter.mOutputMat.tellp()),1);
+    //}
 }
 
 // ------------------------------------------------------------------------------------------------
 // Worker function for exporting a scene to Wavefront OBJ without the material file. Prototyped and registered in Exporter.cpp
 void ExportSceneObjNoMtl(const char* pFile,IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* pProperties) {
     // invoke the exporter
-    ObjExporter exporter(pFile, pScene, true);
+    ObjExporter exporter;
+    exporter.Write(pFile, pScene, true);
 
-    if (exporter.mOutput.fail() || exporter.mOutputMat.fail()) {
-        throw DeadlyExportError("output data creation failed. Most likely the file became too large: " + std::string(pFile));
-    }
+    //if (exporter.mOutput.fail() || exporter.mOutputMat.fail()) {
+    //    throw DeadlyExportError("output data creation failed. Most likely the file became too large: " + std::string(pFile));
+    //}
 
-    // we're still here - export successfully completed. Write both the main OBJ file and the material script
-    {
-        std::unique_ptr<IOStream> outfile (pIOSystem->Open(pFile,"wt"));
-        if(outfile == NULL) {
-            throw DeadlyExportError("could not open output .obj file: " + std::string(pFile));
-        }
-        outfile->Write( exporter.mOutput.str().c_str(), static_cast<size_t>(exporter.mOutput.tellp()),1);
-    }
-
-
+    //// we're still here - export successfully completed. Write both the main OBJ file and the material script
+    //{
+    //    std::unique_ptr<IOStream> outfile (pIOSystem->Open(pFile,"wt"));
+    //    if(outfile == NULL) {
+    //        throw DeadlyExportError("could not open output .obj file: " + std::string(pFile));
+    //    }
+    //    outfile->Write( exporter.mOutput.str().c_str(), static_cast<size_t>(exporter.mOutput.tellp()),1);
+    //}
 }
 
 } // end of namespace Assimp
@@ -112,9 +112,8 @@ void ExportSceneObjNoMtl(const char* pFile,IOSystem* pIOSystem, const aiScene* p
 static const std::string MaterialExt = ".mtl";
 
 // ------------------------------------------------------------------------------------------------
-ObjExporter::ObjExporter(const char* _filename, const aiScene* pScene, bool noMtl)
-: filename(_filename)
-, pScene(pScene)
+ObjExporter::ObjExporter()
+: pScene(NULL)
 , vn()
 , vt()
 , vp()
@@ -130,16 +129,47 @@ ObjExporter::ObjExporter(const char* _filename, const aiScene* pScene, bool noMt
     mOutput.precision(16);
     mOutputMat.imbue(l);
     mOutputMat.precision(16);
-
-    WriteGeometryFile(noMtl);
-    if ( !noMtl ) {
-        WriteMaterialFile();
-    }
 }
 
 // ------------------------------------------------------------------------------------------------
 ObjExporter::~ObjExporter() {
     // empty
+}
+
+// ------------------------------------------------------------------------------------------------
+void ObjExporter::Write(const char* _filename, const aiScene* _pScene, bool noMtl) {
+    filename = _filename;
+    pScene = _pScene;
+
+    mOutput.open(filename);
+
+    if (mOutput.is_open()) {
+        WriteGeometryFile(noMtl);
+        mOutput.close();
+
+        if (!noMtl) {
+            mOutputMat.open(GetMaterialLibFileName());
+
+            if (mOutputMat.is_open()) {
+                WriteMaterialFile();
+                mOutputMat.close();
+
+                if (mOutputMat.fail()) {
+
+                }
+            }
+            else {
+                throw DeadlyExportError("could not open output .mtl file: " + std::string(GetMaterialLibFileName()));
+            }
+        }
+    }
+    else {
+        throw DeadlyExportError("could not open output .obj file: " + std::string(_filename));
+    }
+
+    if (mOutput.fail() || mOutputMat.fail()) {
+        throw DeadlyExportError("output data creation failed. Most likely the file became too large: " + std::string(_filename));
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -166,7 +196,7 @@ std::string ObjExporter::GetMaterialLibFileName() {
 }
 
 // ------------------------------------------------------------------------------------------------
-void ObjExporter::WriteHeader(std::ostringstream& out) {
+void ObjExporter::WriteHeader(std::ofstream& out) {
     out << "# File produced by Open Asset Import Library (http://www.assimp.sf.net)" << endl;
     out << "# (assimp v" << aiGetVersionMajor() << '.' << aiGetVersionMinor() << '.'
         << aiGetVersionRevision() << ")" << endl  << endl;

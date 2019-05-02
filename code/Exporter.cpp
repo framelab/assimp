@@ -120,9 +120,9 @@ Exporter::ExportFormatEntry gExporters[] =
 #endif
 
 #ifndef ASSIMP_BUILD_NO_OBJ_EXPORTER
-    Exporter::ExportFormatEntry( "obj", "Wavefront OBJ format", "obj", &ExportSceneObj,
+    Exporter::ExportFormatEntry( "obj", "Wavefront OBJ format (direct)", "obj", &ExportSceneObj,
         0 /* aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices */),
-    Exporter::ExportFormatEntry( "objnomtl", "Wavefront OBJ format without material file", "obj", &ExportSceneObjNoMtl,
+    Exporter::ExportFormatEntry( "objnomtl", "Wavefront OBJ format (direct) without material file", "obj", &ExportSceneObjNoMtl,
         0 /* aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices */),
 #endif
 
