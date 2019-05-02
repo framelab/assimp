@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -315,22 +315,19 @@ void Importer::SetIOHandler( IOSystem* pIOHandler)
 
 // ------------------------------------------------------------------------------------------------
 // Get the currently set IO handler
-IOSystem* Importer::GetIOHandler() const
-{
+IOSystem* Importer::GetIOHandler() const {
     return pimpl->mIOHandler;
 }
 
 // ------------------------------------------------------------------------------------------------
 // Check whether a custom IO handler is currently set
-bool Importer::IsDefaultIOHandler() const
-{
+bool Importer::IsDefaultIOHandler() const {
     return pimpl->mIsDefaultHandler;
 }
 
 // ------------------------------------------------------------------------------------------------
 // Supplies a custom progress handler to get regular callbacks during importing
-void Importer::SetProgressHandler ( ProgressHandler* pHandler )
-{
+void Importer::SetProgressHandler ( ProgressHandler* pHandler ) {
     ASSIMP_BEGIN_EXCEPTION_REGION();
     // If the new handler is zero, allocate a default implementation.
     if (!pHandler)
@@ -351,15 +348,13 @@ void Importer::SetProgressHandler ( ProgressHandler* pHandler )
 
 // ------------------------------------------------------------------------------------------------
 // Get the currently set progress handler
-ProgressHandler* Importer::GetProgressHandler() const
-{
+ProgressHandler* Importer::GetProgressHandler() const {
     return pimpl->mProgressHandler;
 }
 
 // ------------------------------------------------------------------------------------------------
 // Check whether a custom progress handler is currently set
-bool Importer::IsDefaultProgressHandler() const
-{
+bool Importer::IsDefaultProgressHandler() const {
     return pimpl->mIsDefaultProgressHandler;
 }
 
@@ -383,6 +378,7 @@ bool _ValidateFlags(unsigned int pFlags)
 void Importer::FreeScene( )
 {
     ASSIMP_BEGIN_EXCEPTION_REGION();
+
     delete pimpl->mScene;
     pimpl->mScene = NULL;
 
@@ -487,12 +483,12 @@ const aiScene* Importer::ReadFileFromMemory( const void* pBuffer,
     IOSystem* io = pimpl->mIOHandler;
     pimpl->mIOHandler = NULL;
 
-    SetIOHandler(new MemoryIOSystem((const uint8_t*)pBuffer,pLength));
+    SetIOHandler(new MemoryIOSystem((const uint8_t*)pBuffer,pLength,io));
 
     // read the file and recover the previous IOSystem
-    static const size_t BufferSize(Importer::MaxLenHint + 28);
-    char fbuff[ BufferSize ];
-    ai_snprintf(fbuff, BufferSize, "%s.%s",AI_MEMORYIO_MAGIC_FILENAME,pHint);
+    static const size_t BufSize(Importer::MaxLenHint + 28);
+    char fbuff[BufSize];
+    ai_snprintf(fbuff, BufSize, "%s.%s",AI_MEMORYIO_MAGIC_FILENAME,pHint);
 
     ReadFile(fbuff,pFlags);
     SetIOHandler(io);
@@ -930,20 +926,19 @@ BaseImporter* Importer::GetImporter (const char* szExtension) const
 
 // ------------------------------------------------------------------------------------------------
 // Find a loader plugin for a given file extension
-size_t Importer::GetImporterIndex (const char* szExtension) const
-{
-    ai_assert(szExtension);
+size_t Importer::GetImporterIndex (const char* szExtension) const {
+    ai_assert(nullptr != szExtension);
 
     ASSIMP_BEGIN_EXCEPTION_REGION();
 
     // skip over wildcard and dot characters at string head --
-    for(;*szExtension == '*' || *szExtension == '.'; ++szExtension);
+    for ( ; *szExtension == '*' || *szExtension == '.'; ++szExtension );
 
     std::string ext(szExtension);
     if (ext.empty()) {
         return static_cast<size_t>(-1);
     }
-    std::transform(ext.begin(),ext.end(), ext.begin(), tolower);
+    std::transform( ext.begin(), ext.end(), ext.begin(), ToLower<char> );
 
     std::set<std::string> str;
     for (std::vector<BaseImporter*>::const_iterator i =  pimpl->mImporter.begin();i != pimpl->mImporter.end();++i)  {

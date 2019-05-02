@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <assimp/BaseImporter.h>
+#include <assimp/ParsingUtils.h>
 #include "FileSystemFilter.h"
 #include "Importer.h"
 #include <assimp/ByteSwapper.h>
@@ -53,6 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/importerdesc.h>
+
 #include <ios>
 #include <list>
 #include <memory>
@@ -63,7 +65,7 @@ using namespace Assimp;
 
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
-BaseImporter::BaseImporter()
+BaseImporter::BaseImporter() AI_NO_EXCEPT
 : m_progress() {
     // nothing to do here
 }
@@ -158,15 +160,14 @@ void BaseImporter::GetExtensionList(std::set<std::string>& extensions) {
     if (pStream.get() ) {
         // read 200 characters from the file
         std::unique_ptr<char[]> _buffer (new char[searchBytes+1 /* for the '\0' */]);
-        char* buffer = _buffer.get();
-
-        const size_t read = pStream->Read(buffer,1,searchBytes);
-        if( !read ) {
+        char *buffer( _buffer.get() );
+        const size_t read( pStream->Read(buffer,1,searchBytes) );
+        if( 0 == read ) {
             return false;
         }
 
         for( size_t i = 0; i < read; ++i ) {
-            buffer[ i ] = ::tolower( buffer[ i ] );
+            buffer[ i ] = static_cast<char>( ::tolower( buffer[ i ] ) );
         }
 
         // It is not a proper handling of unicode files here ...
@@ -187,7 +188,7 @@ void BaseImporter::GetExtensionList(std::set<std::string>& extensions) {
             token.clear();
             const char *ptr( tokens[ i ] );
             for ( size_t tokIdx = 0; tokIdx < len; ++tokIdx ) {
-                token.push_back( tolower( *ptr ) );
+                token.push_back( static_cast<char>( tolower( *ptr ) ) );
                 ++ptr;
             }
             const char* r = strstr( buffer, token.c_str() );
@@ -240,16 +241,19 @@ void BaseImporter::GetExtensionList(std::set<std::string>& extensions) {
 
 // ------------------------------------------------------------------------------------------------
 // Get file extension from path
-/*static*/ std::string BaseImporter::GetExtension (const std::string& pFile)
-{
-    std::string::size_type pos = pFile.find_last_of('.');
+std::string BaseImporter::GetExtension( const std::string& file ) {
+    std::string::size_type pos = file.find_last_of('.');
 
     // no file extension at all
-    if( pos == std::string::npos)
+    if (pos == std::string::npos) {
         return "";
+    }
 
-    std::string ret = pFile.substr(pos+1);
-    std::transform(ret.begin(),ret.end(),ret.begin(),::tolower); // thanks to Andy Maloney for the hint
+
+    // thanks to Andy Maloney for the hint
+    std::string ret = file.substr( pos + 1 );
+    std::transform( ret.begin(), ret.end(), ret.begin(), ToLower<char>);
+
     return ret;
 }
 

@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -90,6 +90,9 @@ static bool IsBinarySTL(const char* buffer, unsigned int fileSize) {
     return expectedBinaryFileSize == fileSize;
 }
 
+static const size_t BufferSize = 500;
+static const char UnicodeBoundary = 127;
+
 // An ascii STL buffer will begin with "solid NAME", where NAME is optional.
 // Note: The "solid NAME" check is necessary, but not sufficient, to determine
 // if the buffer is ASCII; a binary header could also begin with "solid NAME".
@@ -108,10 +111,10 @@ static bool IsAsciiSTL(const char* buffer, unsigned int fileSize) {
     bool isASCII( strncmp( buffer, "solid", 5 ) == 0 );
     if( isASCII ) {
         // A lot of importers are write solid even if the file is binary. So we have to check for ASCII-characters.
-        if( fileSize >= 500 ) {
+        if( fileSize >= BufferSize) {
             isASCII = true;
-            for( unsigned int i = 0; i < 500; i++ ) {
-                if( buffer[ i ] > 127 ) {
+            for( unsigned int i = 0; i < BufferSize; i++ ) {
+                if( buffer[ i ] > UnicodeBoundary) {
                     isASCII = false;
                     break;
                 }
@@ -179,7 +182,7 @@ void STLImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
     std::unique_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
 
     // Check whether we can read from the file
-    if( file.get() == NULL) {
+    if( file.get() == nullptr) {
         throw DeadlyImportError( "Failed to open STL file " + pFile + ".");
     }
 
@@ -187,11 +190,11 @@ void STLImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
 
     // allocate storage and copy the contents of the file to a memory buffer
     // (terminate it with zero)
-    std::vector<char> mBuffer2;
-    TextFileToBuffer(file.get(),mBuffer2);
+    std::vector<char> buffer2;
+    TextFileToBuffer(file.get(),buffer2);
 
     this->pScene = pScene;
-    this->mBuffer = &mBuffer2[0];
+    this->mBuffer = &buffer2[0];
 
     // the default vertex color is light gray.
     clrColorDefault.r = clrColorDefault.g = clrColorDefault.b = clrColorDefault.a = (ai_real) 0.6;
@@ -228,6 +231,8 @@ void STLImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
     pScene->mNumMaterials = 1;
     pScene->mMaterials = new aiMaterial*[1];
     pScene->mMaterials[0] = pcMat;
+
+    mBuffer = nullptr;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -535,11 +540,21 @@ bool STLImporter::LoadBinaryFile()
     // now copy faces
     addFacesToMesh(pMesh);
 
+    aiNode* root = pScene->mRootNode;
+
+    // allocate one node
+    aiNode* node = new aiNode();
+    node->mParent = root;
+
+    root->mNumChildren = 1u;
+    root->mChildren = new aiNode*[root->mNumChildren];
+    root->mChildren[0] = node;
+
     // add all created meshes to the single node
-    pScene->mRootNode->mNumMeshes = pScene->mNumMeshes;
-    pScene->mRootNode->mMeshes = new unsigned int[pScene->mNumMeshes];
+    node->mNumMeshes = pScene->mNumMeshes;
+    node->mMeshes = new unsigned int[pScene->mNumMeshes];
     for (unsigned int i = 0; i < pScene->mNumMeshes; i++)
-        pScene->mRootNode->mMeshes[i] = i;
+        node->mMeshes[i] = i;
 
     if (bIsMaterialise && !pMesh->mColors[0])
     {

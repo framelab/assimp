@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -115,23 +115,22 @@ void ObjFileParser::parseFile( IOStreamBuffer<char> &streamBuffer ) {
     //const unsigned int updateProgressEveryBytes = 100 * 1024;
     unsigned int progressCounter = 0;
     const unsigned int bytesToProcess = static_cast<unsigned int>(streamBuffer.size());
-    const unsigned int progressTotal = 3 * bytesToProcess;
-    const unsigned int progressOffset = bytesToProcess;
+    const unsigned int progressTotal = bytesToProcess;
     unsigned int processed = 0;
     size_t lastFilePos( 0 );
 
     std::vector<char> buffer;
-    while ( streamBuffer.getNextDataLine( buffer, '\\' ) ) {
+    while ( streamBuffer.getNextDataLine( buffer, '\0' ) ) {
         m_DataIt = buffer.begin();
         m_DataItEnd = buffer.end();
 
         // Handle progress reporting
         const size_t filePos( streamBuffer.getFilePos() );
         if ( lastFilePos < filePos ) {
-            processed += static_cast<unsigned int>(filePos);
+            processed = static_cast<unsigned int>(filePos);
             lastFilePos = filePos;
             progressCounter++;
-            m_progress->UpdateFileRead( progressOffset + processed * 2, progressTotal );
+            m_progress->UpdateFileRead( processed, progressTotal );
         }
 
         // parse line
@@ -154,7 +153,8 @@ void ObjFileParser::parseFile( IOStreamBuffer<char> &streamBuffer ) {
                 } else if (*m_DataIt == 't') {
                     // read in texture coordinate ( 2D or 3D )
                     ++m_DataIt;
-                    getVector( m_pModel->m_TextureCoord );
+                    size_t dim = getVector(m_pModel->m_TextureCoord);
+                    m_pModel->m_TextureCoordDim = std::max(m_pModel->m_TextureCoordDim, (unsigned int)dim);
                 } else if (*m_DataIt == 'n') {
                     // Read in normal vector definition
                     ++m_DataIt;
@@ -299,7 +299,7 @@ size_t ObjFileParser::getNumComponentsInDataDefinition() {
     return numComponents;
 }
 
-void ObjFileParser::getVector( std::vector<aiVector3D> &point3d_array ) {
+size_t ObjFileParser::getVector( std::vector<aiVector3D> &point3d_array ) {
     size_t numComponents = getNumComponentsInDataDefinition();
     ai_real x, y, z;
     if( 2 == numComponents ) {
@@ -323,6 +323,7 @@ void ObjFileParser::getVector( std::vector<aiVector3D> &point3d_array ) {
     }
     point3d_array.push_back( aiVector3D( x, y, z ) );
     m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
+    return numComponents;
 }
 
 void ObjFileParser::getVector3( std::vector<aiVector3D> &point3d_array ) {

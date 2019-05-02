@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 All rights reserved.
@@ -150,9 +150,11 @@ ASSIMP_API aiScene::~aiScene() {
             delete mMeshes[a];
     delete [] mMeshes;
 
-    if (mNumMaterials && mMaterials)
-        for( unsigned int a = 0; a < mNumMaterials; a++)
-            delete mMaterials[a];
+    if (mNumMaterials && mMaterials) {
+        for (unsigned int a = 0; a < mNumMaterials; ++a ) {
+            delete mMaterials[ a ];
+        }
+    }
     delete [] mMaterials;
 
     if (mNumAnimations && mAnimations)
